@@ -19,7 +19,6 @@ import {
 import { formatDatum, formatEuro, formatProzent } from '@/domain/format';
 import type { AbrechnungsErgebnis, MieterAbrechnung } from '@/domain/types';
 import { cn } from '@/lib/utils';
-import { erzeugePdf } from './AbrechnungPdf';
 
 interface Props {
   ergebnis: AbrechnungsErgebnis;
@@ -33,6 +32,7 @@ export function AbrechnungPreview({ ergebnis }: Props) {
   async function downloadPdf(mieter: MieterAbrechnung) {
     setPdfLoading(mieter.einheitId);
     try {
+      const { erzeugePdf } = await import('./AbrechnungPdf');
       await erzeugePdf(ergebnis, mieter);
     } finally {
       setPdfLoading(null);
