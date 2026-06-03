@@ -18,6 +18,12 @@ describe('ISO-Datumshilfen', () => {
     expect(daysBetweenInclusive('2025-01-01', '2025-12-31')).toBe(365);
   });
 
+  it('klemmt den 29.02. im Nicht-Schaltjahr auf den 28.02. (kein Monatsüberlauf)', () => {
+    expect(addYearsIso('2024-02-29', 1)).toBe('2025-02-28');
+    // Schaltjahr -> Schaltjahr bleibt erhalten
+    expect(addYearsIso('2024-02-29', 4)).toBe('2028-02-29');
+  });
+
   it('parst gleiche ISO-Daten immer auf denselben UTC-Tag', () => {
     expect(isoToUtcDay('2025-06-01')).toBe(isoToUtcDay('2025-06-01'));
     expect(isoToUtcDay('2025-02-30')).toBeNull();

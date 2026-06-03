@@ -121,6 +121,28 @@ describe('erstelleAbrechnung', () => {
     expect(wasserB?.betrag).toBeCloseTo(700, 2);
   });
 
+  it('verteilt verbrauchsbasis "waerme" nach Wärme (40/60), nicht nach Wasser', () => {
+    const input = setup();
+    input.kostenpositionen = [
+      {
+        id: 'k-strom',
+        bezeichnung: 'Wärme-Submeter',
+        betrag: 1000,
+        betrKvNr: 17,
+        umlageschluessel: 'verbrauch',
+        verbrauchsbasis: 'waerme',
+        istHeizkosten: false,
+        umlagefaehig: true,
+      },
+    ];
+    const r = erstelleAbrechnung(input);
+    // Wärme A/B = 4000/6000 -> 40/60 (nicht 30/70 wie Wasser)
+    const a = r.mieter[0].einzelpositionen.find((p) => p.bezeichnung === 'Wärme-Submeter');
+    const b = r.mieter[1].einzelpositionen.find((p) => p.bezeichnung === 'Wärme-Submeter');
+    expect(a?.betrag).toBeCloseTo(400, 2);
+    expect(b?.betrag).toBeCloseTo(600, 2);
+  });
+
   it('ignoriert nicht umlagefähige Positionen', () => {
     const r = erstelleAbrechnung(setup());
     for (const m of r.mieter) {

@@ -6,13 +6,18 @@ import { selectAbrechnung, useAppStore } from '@/store/useAppStore';
 
 export function Dashboard() {
   const ergebnis = useAppStore(selectAbrechnung);
-  const { gebaeude, einheiten, kostenpositionen, zeitraum } = useAppStore();
+  const gebaeude = useAppStore((s) => s.gebaeude);
+  const einheiten = useAppStore((s) => s.einheiten);
+  const kostenpositionen = useAppStore((s) => s.kostenpositionen);
+  const zeitraum = useAppStore((s) => s.zeitraum);
 
   const summeKosten = kostenpositionen.reduce((s, k) => s + k.betrag, 0);
   const umlagefaehig = kostenpositionen
     .filter((k) => k.umlagefaehig)
     .reduce((s, k) => s + k.betrag, 0);
-  const leerstand = ergebnis.mieter.filter((m) => m.hatLeerstand).length;
+  // hatLeerstand markiert jede nicht ganzjährige Belegung (echter Leerstand
+  // ODER unterjähriger Mieterwechsel) – daher die neutrale Beschriftung.
+  const teilzeitraum = ergebnis.mieter.filter((m) => m.hatLeerstand).length;
   const nachzahlungSumme = ergebnis.mieter
     .filter((m) => m.saldo > 0)
     .reduce((s, m) => s + m.saldo, 0);
@@ -42,7 +47,7 @@ export function Dashboard() {
           icon={<Users className="h-4 w-4" />}
           label="Personen"
           value={`${gebaeude.gesamtPersonen}`}
-          sub={leerstand > 0 ? `${leerstand} Leerstand` : 'kein Leerstand'}
+          sub={teilzeitraum > 0 ? `${teilzeitraum} mit Teilzeitraum` : 'alle ganzjährig belegt'}
         />
         <KennzahlCard
           icon={<Euro className="h-4 w-4" />}

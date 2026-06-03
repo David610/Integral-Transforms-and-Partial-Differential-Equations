@@ -59,11 +59,17 @@ export function verteileHeizkosten(
 }
 
 /**
+ * Kürzungssatz des Mieters bei nicht-verbrauchsabhängiger Abrechnung
+ * gemäß § 12 HeizkostenV (15 %). Einzige Quelle der Wahrheit für diesen Wert.
+ */
+export const HEIZKOSTEN_KUERZUNG_PROZENT = 0.15;
+
+/**
  * Kürzungsrecht des Mieters bei nicht-verbrauchsabhängiger Abrechnung
  * gemäß § 12 HeizkostenV (15 % Kürzung der Heizkostenposition).
  */
 export function kuerzungsrechtAnwenden(heizkostenAnteil: number): number {
-  return heizkostenAnteil * 0.85;
+  return heizkostenAnteil * (1 - HEIZKOSTEN_KUERZUNG_PROZENT);
 }
 
 function clamp(value: number, min: number, max: number): number {

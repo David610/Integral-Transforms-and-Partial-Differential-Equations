@@ -24,3 +24,9 @@ yarn-error.log*
 
 # Vitest
 coverage
+
+# Windows system files (accidentally generated)
+Microsoft/
+
+# Internal planning docs
+docs/

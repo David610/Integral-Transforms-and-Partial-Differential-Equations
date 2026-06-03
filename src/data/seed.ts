@@ -17,7 +17,7 @@ export const seedGebaeude: Gebaeude = {
   adresse: 'Lübecker Straße 32, 39124 Magdeburg-Neue Neustadt',
   gesamtwohnflaeche: 851.2,
   anzahlEinheiten: 15,
-  gesamtPersonen: 28,
+  gesamtPersonen: 29,
 };
 
 export const seedEinheiten: Einheit[] = [
@@ -205,6 +205,7 @@ export const seedKosten: Kostenposition[] = [
     betrag: 4680,
     betrKvNr: 2,
     umlageschluessel: 'verbrauch',
+    verbrauchsbasis: 'wasser',
     istHeizkosten: false,
     umlagefaehig: true,
   },

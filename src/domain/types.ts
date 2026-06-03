@@ -8,6 +8,14 @@
 export type UmlageSchluessel = 'flaeche' | 'einheiten' | 'personen' | 'verbrauch';
 
 /**
+ * Bezugsgröße für verbrauchsabhängige Positionen (Umlageschlüssel 'verbrauch').
+ * Bestimmt, welcher erfasste Zählerwert der Einheit als Maßstab dient.
+ * Für Heizkostenpositionen (istHeizkosten) ist dieser Wert ohne Belang –
+ * dort greift die HeizkostenV-Aufteilung über den Wärmeverbrauch.
+ */
+export type VerbrauchsBasis = 'wasser' | 'waerme';
+
+/**
  * BetrKV-Nummer 1–17 nach § 2 BetrKV. 0 = nicht umlagefähig.
  */
 export type BetrKvNr = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
@@ -49,6 +57,12 @@ export interface Kostenposition {
   betrag: number;
   betrKvNr: BetrKvNr;
   umlageschluessel: UmlageSchluessel;
+  /**
+   * Bezugsgröße bei Umlageschlüssel 'verbrauch'. Default 'wasser'.
+   * Verhindert, dass z. B. eine wärmebasierte Position versehentlich nach
+   * Wasserverbrauch verteilt wird.
+   */
+  verbrauchsbasis?: VerbrauchsBasis;
   /** True, wenn die Position über die HeizkostenV verteilt wird */
   istHeizkosten: boolean;
   /** False = Verwaltungskosten, Instandhaltung etc. (nicht umlagefähig) */
