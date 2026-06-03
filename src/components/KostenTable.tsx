@@ -19,7 +19,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatEuro } from '@/domain/format';
-import type { BetrKvNr, Kostenposition, UmlageSchluessel } from '@/domain/types';
+import type {
+  BetrKvNr,
+  Kostenposition,
+  UmlageSchluessel,
+  VerbrauchsBasis,
+} from '@/domain/types';
 import { useAppStore } from '@/store/useAppStore';
 
 const SCHLUESSEL_LABEL: Record<UmlageSchluessel, string> = {
@@ -27,6 +32,11 @@ const SCHLUESSEL_LABEL: Record<UmlageSchluessel, string> = {
   einheiten: 'Anzahl Einheiten',
   personen: 'Personen',
   verbrauch: 'Verbrauch',
+};
+
+const BASIS_LABEL: Record<VerbrauchsBasis, string> = {
+  wasser: 'nach Wasser',
+  waerme: 'nach Wärme',
 };
 
 /** Sprechende Bezeichner der BetrKV-Positionen (§ 2 BetrKV). */
@@ -142,6 +152,22 @@ export function KostenTable() {
                       </option>
                     ))}
                   </Select>
+                  {k.umlageschluessel === 'verbrauch' && !k.istHeizkosten && (
+                    <Select
+                      className="mt-1"
+                      value={k.verbrauchsbasis ?? 'wasser'}
+                      onChange={(e) =>
+                        patch(k, 'verbrauchsbasis', e.target.value as VerbrauchsBasis)
+                      }
+                      aria-label="Verbrauchsbasis"
+                    >
+                      {(Object.keys(BASIS_LABEL) as VerbrauchsBasis[]).map((b) => (
+                        <option key={b} value={b}>
+                          {BASIS_LABEL[b]}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
                 </TableCell>
                 <TableCell>
                   <label className="inline-flex items-center gap-2 text-xs">

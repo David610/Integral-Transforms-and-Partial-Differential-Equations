@@ -6,7 +6,11 @@
  */
 
 import { berechneCo2Kosten, umlagefaehigeHeizkostenNachCo2 } from './co2';
-import { verteileHeizkosten } from './heizkosten';
+import {
+  HEIZKOSTEN_KUERZUNG_PROZENT,
+  kuerzungsrechtAnwenden,
+  verteileHeizkosten,
+} from './heizkosten';
 import {
   berechneAnteil,
   berechneBelegung,
@@ -52,7 +56,6 @@ interface PositionsZuordnung {
 }
 
 const DEFAULT_EMISSIONSFAKTOR_ERDGAS = 0.201; // kg CO2 / kWh
-const HEIZKOSTEN_KUERZUNG_OHNE_VERBRAUCH = 0.15;
 const EPS = 1e-9;
 
 export function erstelleAbrechnung(input: AbrechnungInput): AbrechnungsErgebnis {
@@ -193,6 +196,13 @@ function verteilePosition({
     });
   }
 
+  const istWaermeBasis = pos.verbrauchsbasis === 'waerme';
+  const verbrauchSummeHaus =
+    pos.umlageschluessel === 'verbrauch' ? (istWaermeBasis ? waermeSumme : wasserSumme) : 0;
+  const einheitVerbrauch = istWaermeBasis
+    ? kontext.einheit.verbrauchWaerme
+    : kontext.einheit.verbrauchWasser;
+
   const vollerEinheitenanteil = pos.istHeizkosten
     ? verteileHeizkosten(
         umlagefaehigeKosten,
@@ -206,7 +216,8 @@ function verteilePosition({
         pos.umlageschluessel,
         kontext.einheit,
         gebaeude,
-        pos.umlageschluessel === 'verbrauch' ? wasserSumme : 0,
+        verbrauchSummeHaus,
+        einheitVerbrauch,
       );
   const mieterBetrag = vollerEinheitenanteil * kontext.belegung.belegungsquote;
   const vermieterBetrag = vollerEinheitenanteil - mieterBetrag;
@@ -243,8 +254,7 @@ function verteileHeizkostenOhneVerbrauch({
   const flaechenanteil = berechneAnteil('flaeche', kontext.einheit, gebaeude, 0);
   const vollerEinheitenanteil = umlagefaehigeKosten * flaechenanteil;
   const mieterVorKuerzung = vollerEinheitenanteil * kontext.belegung.belegungsquote;
-  const kuerzung = mieterVorKuerzung * HEIZKOSTEN_KUERZUNG_OHNE_VERBRAUCH;
-  const mieterBetrag = mieterVorKuerzung - kuerzung;
+  const mieterBetrag = kuerzungsrechtAnwenden(mieterVorKuerzung);
   const vermieterBetrag = vollerEinheitenanteil - mieterBetrag;
 
   return {
@@ -299,7 +309,11 @@ function hinweis({
   const teile: string[] = [];
 
   if (pos.istHeizkosten && ohneVerbrauch) {
-    teile.push('Verbrauch nicht erfasst: Flaechenverteilung mit 15 % Kuerzung');
+    teile.push(
+      `Verbrauch nicht erfasst: Flaechenverteilung mit ${Math.round(
+        HEIZKOSTEN_KUERZUNG_PROZENT * 100,
+      )} % Kuerzung`,
+    );
   } else if (pos.istHeizkosten && heizkostenConfig) {
     teile.push(
       `Grund ${formatPercent(1 - heizkostenConfig.verbrauchsquote)} / Verbrauch ${formatPercent(
