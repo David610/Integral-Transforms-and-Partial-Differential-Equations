@@ -104,13 +104,50 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'nk-express-store-v1',
+      version: 1,
+      /**
+       * Migriert persistierten State über Schema-Versionen hinweg. Ohne diese
+       * Funktion würde älterer localStorage-Stand flach in die Defaults gemischt,
+       * sodass neu hinzugekommene Felder `undefined` bleiben.
+       */
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<AppState> | undefined;
+        if (!state) return state as unknown as AppState;
+        if (version < 1) {
+          // v0 -> v1: verbrauchsbasis auf Verbrauchspositionen ergänzen.
+          const kostenpositionen = (state.kostenpositionen ?? []).map((k) => ({
+            ...k,
+            verbrauchsbasis: k.verbrauchsbasis ?? 'wasser',
+          }));
+          return { ...state, kostenpositionen } as AppState;
+        }
+        return state as AppState;
+      },
     },
   ),
 );
 
-/** Selector: aktuelle Abrechnung berechnen */
+// Einfacher Single-Slot-Memo: hält die Referenz des Ergebnisses stabil, solange
+// sich keine der Eingabe-Slices ändert. Das vermeidet unnötige Re-Renders (das
+// Ergebnisobjekt wäre sonst bei jedem Aufruf neu) und Mehrfachberechnungen.
+let abrechnungCache: { deps: readonly unknown[]; result: AbrechnungsErgebnis } | null = null;
+
+/** Selector: aktuelle Abrechnung berechnen (memoisiert über die Eingabe-Slices) */
 export function selectAbrechnung(s: AppState): AbrechnungsErgebnis {
-  return erstelleAbrechnung({
+  const deps = [
+    s.gebaeude,
+    s.einheiten,
+    s.kostenpositionen,
+    s.zeitraum,
+    s.heizkostenConfig,
+    s.co2Config,
+  ] as const;
+
+  if (abrechnungCache && abrechnungCache.deps.every((d, i) => d === deps[i])) {
+    return abrechnungCache.result;
+  }
+
+  const result = erstelleAbrechnung({
     gebaeude: s.gebaeude,
     einheiten: s.einheiten,
     kostenpositionen: s.kostenpositionen,
@@ -118,4 +155,6 @@ export function selectAbrechnung(s: AppState): AbrechnungsErgebnis {
     heizkostenConfig: s.heizkostenConfig,
     co2Config: s.co2Config,
   });
+  abrechnungCache = { deps, result };
+  return result;
 }

@@ -51,10 +51,19 @@ export function todayIso(): string {
   ].join('-');
 }
 
+function daysInMonth(year: number, month: number): number {
+  // month is 1-based; day 0 of the next month is the last day of this month.
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
 export function addYearsIso(iso: string, years: number): string {
   const parts = parseIsoParts(iso);
   if (!parts) return iso;
-  const date = new Date(Date.UTC(parts.year + years, parts.month - 1, parts.day));
+  const targetYear = parts.year + years;
+  // Clamp the day so 29.02. on a non-leap target year becomes 28.02. instead of
+  // rolling over into March (§ 556 Abs. 3 BGB deadline must stay in the month).
+  const day = Math.min(parts.day, daysInMonth(targetYear, parts.month));
+  const date = new Date(Date.UTC(targetYear, parts.month - 1, day));
   return date.toISOString().slice(0, 10);
 }
 

@@ -2,7 +2,7 @@
  * Stammdatenpflege: Gebäude bearbeiten + Einheiten verwalten.
  */
 
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/table';
 import { formatDatum, formatEuro, formatFlaeche, formatZahl } from '@/domain/format';
 import type { Einheit, Gebaeude } from '@/domain/types';
+import { pruefeStammdaten } from '@/domain/umlage';
 import { useAppStore } from '@/store/useAppStore';
 
 export function StammdatenForm() {
@@ -29,6 +30,8 @@ export function StammdatenForm() {
   const removeEinheit = useAppStore((s) => s.removeEinheit);
 
   const [editId, setEditId] = useState<string | null>(null);
+
+  const warnungen = pruefeStammdaten(gebaeude, einheiten);
 
   function handleNew() {
     const id = `e-${Date.now()}`;
@@ -47,6 +50,27 @@ export function StammdatenForm() {
 
   return (
     <div className="space-y-6">
+      {warnungen.length > 0 && (
+        <div
+          className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="alert"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium">Stammdaten prüfen</p>
+            <ul className="list-disc space-y-0.5 pl-4">
+              {warnungen.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+            <p className="text-xs text-amber-800">
+              Abweichende Bezugsgrößen führen dazu, dass sich die Mieteranteile nicht
+              auf 100 % summieren – die Differenz trägt der Eigentümer.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Gebäudestammdaten</CardTitle>

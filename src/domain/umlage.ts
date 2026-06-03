@@ -81,6 +81,7 @@ export function berechneAnteil(
   einheit: Einheit,
   gebaeude: Gebaeude,
   verbrauchSummeHaus: number,
+  einheitVerbrauch = einheit.verbrauchWasser,
 ): number {
   switch (schluessel) {
     case 'flaeche':
@@ -94,26 +95,69 @@ export function berechneAnteil(
       return einheit.personen / gebaeude.gesamtPersonen;
     case 'verbrauch':
       if (verbrauchSummeHaus <= 0) return 0;
-      // Default: Wasserverbrauch; spezialisierter Verbrauch wird in heizkosten.ts
-      // separat behandelt. Hier nutzen wir Wasserverbrauch als generischen Wert.
-      return einheit.verbrauchWasser / verbrauchSummeHaus;
+      // Maßstab ist der erfasste Verbrauch der Einheit (Default: Wasser).
+      // Die Bezugsgröße wird von der aufrufenden Stelle passend zur
+      // verbrauchsbasis der Position übergeben.
+      return einheitVerbrauch / verbrauchSummeHaus;
   }
 }
 
-export function kostenEinheit(gesamtkosten: number, anteil: number): number {
-  return gesamtkosten * anteil;
-}
-
 /**
- * Summiert den Wasserverbrauch über alle aktiven Einheiten.
+ * Summiert den Wasserverbrauch über alle Einheiten (inkl. Leerstand).
+ * Der Verbrauch leerstehender Einheiten bleibt im Nenner, damit sein Anteil
+ * dem Eigentümer und nicht den aktiven Mietern zugerechnet wird.
  */
-export function summeWasserverbrauch(einheiten: Einheit[], _periodeEnde?: string): number {
+export function summeWasserverbrauch(einheiten: Einheit[]): number {
   return einheiten.reduce((sum, e) => sum + Math.max(e.verbrauchWasser, 0), 0);
 }
 
 /**
- * Summiert den Wärmeverbrauch über alle aktiven Einheiten.
+ * Summiert den Wärmeverbrauch über alle Einheiten (inkl. Leerstand).
+ * Siehe {@link summeWasserverbrauch} zur Behandlung des Leerstands.
  */
-export function summeWaermeverbrauch(einheiten: Einheit[], _periodeEnde?: string): number {
+export function summeWaermeverbrauch(einheiten: Einheit[]): number {
   return einheiten.reduce((sum, e) => sum + Math.max(e.verbrauchWaerme, 0), 0);
+}
+
+/**
+ * Prüft die Stammdaten auf Inkonsistenzen, die zu falschen Umlagen führen.
+ *
+ * Die Bezugsgrößen `gesamtPersonen` und `gesamtwohnflaeche` am Gebäude sind
+ * frei pflegbar und bilden den Nenner der personen- bzw. flächenbasierten
+ * Umlage. Weichen sie von der Summe der Einheiten ab, summieren sich die
+ * Mieteranteile nicht auf 100 % – die Differenz landet stillschweigend beim
+ * Eigentümer. Diese Funktion macht solche Abweichungen sichtbar.
+ */
+export function pruefeStammdaten(gebaeude: Gebaeude, einheiten: Einheit[]): string[] {
+  const warnungen: string[] = [];
+  const TOLERANZ = 0.01;
+
+  const summeFlaeche = einheiten.reduce((s, e) => s + e.wohnflaeche, 0);
+  if (Math.abs(summeFlaeche - gebaeude.gesamtwohnflaeche) > TOLERANZ) {
+    warnungen.push(
+      `Gesamtwohnfläche (${gebaeude.gesamtwohnflaeche} m²) weicht von der Summe ` +
+        `der Einheiten (${round2(summeFlaeche)} m²) ab.`,
+    );
+  }
+
+  const summePersonen = einheiten.reduce((s, e) => s + e.personen, 0);
+  if (Math.abs(summePersonen - gebaeude.gesamtPersonen) > TOLERANZ) {
+    warnungen.push(
+      `Personen gesamt (${gebaeude.gesamtPersonen}) weicht von der Summe der ` +
+        `Einheiten (${summePersonen}) ab.`,
+    );
+  }
+
+  if (einheiten.length !== gebaeude.anzahlEinheiten) {
+    warnungen.push(
+      `Anzahl Einheiten (${gebaeude.anzahlEinheiten}) weicht von den erfassten ` +
+        `Einheiten (${einheiten.length}) ab.`,
+    );
+  }
+
+  return warnungen;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }

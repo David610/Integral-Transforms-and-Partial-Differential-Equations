@@ -1,8 +1,12 @@
-name = "nk-express"
+name = "immovea"
 compatibility_date = "2024-11-12"
+
+# Build the static site before deploying. dist/ is git-ignored, so the deploy
+# must produce it; this makes `wrangler deploy` self-contained regardless of any
+# dashboard build-command configuration.
+[build]
+command = "npm run build"
 
 [assets]
 directory = "./dist"
-html_handling = "single-page-application"
-# wrangler.toml
-name = 'immovea'
+not_found_handling = "single-page-application"

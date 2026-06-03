@@ -3,7 +3,7 @@ import {
   berechneAnteil,
   berechneBelegung,
   istAktiv,
-  kostenEinheit,
+  pruefeStammdaten,
   summeWaermeverbrauch,
   summeWasserverbrauch,
 } from './umlage';
@@ -50,16 +50,15 @@ describe('berechneAnteil', () => {
     ).toBe(0.1);
   });
 
+  it('verbrauch: nutzt den explizit übergebenen Einheitsverbrauch', () => {
+    expect(
+      berechneAnteil('verbrauch', einheit({ verbrauchWaerme: 80 }), gebaeude, 400, 80),
+    ).toBe(0.2);
+  });
+
   it('liefert 0 wenn Bezugsgröße null ist', () => {
     const leerGebaeude: Gebaeude = { ...gebaeude, gesamtwohnflaeche: 0 };
     expect(berechneAnteil('flaeche', einheit(), leerGebaeude, 0)).toBe(0);
-  });
-});
-
-describe('kostenEinheit', () => {
-  it('multipliziert Gesamtkosten mit Anteil', () => {
-    expect(kostenEinheit(1000, 0.1)).toBe(100);
-    expect(kostenEinheit(0, 0.5)).toBe(0);
   });
 });
 
@@ -113,7 +112,7 @@ describe('summeWasserverbrauch', () => {
       einheit({ id: 'b', verbrauchWasser: 200 }),
       einheit({ id: 'c', verbrauchWasser: 999, mietende: '2024-06-30' }),
     ];
-    expect(summeWasserverbrauch(einheiten, '2025-12-31')).toBe(1299);
+    expect(summeWasserverbrauch(einheiten)).toBe(1299);
   });
 
   it('summiert den Waermeverbrauch aller Einheiten als Hausdenominator', () => {
@@ -122,6 +121,24 @@ describe('summeWasserverbrauch', () => {
       einheit({ id: 'b', verbrauchWaerme: 200 }),
       einheit({ id: 'c', verbrauchWaerme: 999, mietende: '2024-06-30' }),
     ];
-    expect(summeWaermeverbrauch(einheiten, '2025-12-31')).toBe(1299);
+    expect(summeWaermeverbrauch(einheiten)).toBe(1299);
+  });
+});
+
+describe('pruefeStammdaten', () => {
+  it('meldet keine Warnung bei konsistenten Stammdaten', () => {
+    const einheiten = [
+      einheit({ id: 'a', wohnflaeche: 500, personen: 10 }),
+      einheit({ id: 'b', wohnflaeche: 500, personen: 10 }),
+    ];
+    const g: Gebaeude = { ...gebaeude, gesamtwohnflaeche: 1000, gesamtPersonen: 20, anzahlEinheiten: 2 };
+    expect(pruefeStammdaten(g, einheiten)).toEqual([]);
+  });
+
+  it('meldet Abweichungen bei Fläche, Personen und Anzahl', () => {
+    const einheiten = [einheit({ id: 'a', wohnflaeche: 100, personen: 2 })];
+    const g: Gebaeude = { ...gebaeude, gesamtwohnflaeche: 1000, gesamtPersonen: 20, anzahlEinheiten: 10 };
+    const warnungen = pruefeStammdaten(g, einheiten);
+    expect(warnungen).toHaveLength(3);
   });
 });
