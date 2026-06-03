@@ -1,3 +1,6 @@
 name = "nk-express"
 compatibility_date = "2024-11-12"
-pages_build_output_dir = "dist"
+
+[assets]
+directory = "./dist"
+html_handling = "single-page-application"
