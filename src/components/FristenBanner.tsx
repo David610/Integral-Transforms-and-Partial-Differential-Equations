@@ -6,6 +6,7 @@
  */
 
 import { AlertTriangle, Info } from 'lucide-react';
+import { addYearsIso, daysUntilIso } from '@/domain/date';
 import { formatDatum } from '@/domain/format';
 import { cn } from '@/lib/utils';
 
@@ -53,15 +54,10 @@ export function FristenBanner({ periodeEnde }: Props) {
   );
 }
 
-function fristEnde(periodeEnde: string): string {
-  const end = new Date(periodeEnde);
-  end.setFullYear(end.getFullYear() + 1);
-  return end.toISOString().slice(0, 10);
+export function fristEnde(periodeEnde: string): string {
+  return addYearsIso(periodeEnde, 1);
 }
 
-function tageRestFrist(periodeEnde: string): number {
-  const heute = new Date();
-  const frist = new Date(fristEnde(periodeEnde));
-  const diffMs = frist.getTime() - heute.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+export function tageRestFrist(periodeEnde: string): number {
+  return daysUntilIso(fristEnde(periodeEnde));
 }

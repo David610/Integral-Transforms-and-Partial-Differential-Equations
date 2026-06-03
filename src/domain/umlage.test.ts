@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { berechneAnteil, kostenEinheit, summeWasserverbrauch, istAktiv } from './umlage';
+import {
+  berechneAnteil,
+  berechneBelegung,
+  istAktiv,
+  kostenEinheit,
+  summeWaermeverbrauch,
+  summeWasserverbrauch,
+} from './umlage';
 import type { Einheit, Gebaeude } from './types';
 
 const gebaeude: Gebaeude = {
@@ -70,13 +77,51 @@ describe('istAktiv', () => {
   });
 });
 
+describe('berechneBelegung', () => {
+  const zeitraum = { von: '2025-01-01', bis: '2025-12-31' };
+
+  it('erkennt ganzjaehrige Belegung', () => {
+    const belegung = berechneBelegung(einheit(), zeitraum);
+    expect(belegung.belegteTage).toBe(365);
+    expect(belegung.belegungsquote).toBe(1);
+    expect(belegung.hatLeerstand).toBe(false);
+  });
+
+  it('berechnet Einzug im laufenden Jahr tagegenau', () => {
+    const belegung = berechneBelegung(einheit({ mietbeginn: '2025-07-01' }), zeitraum);
+    expect(belegung.belegteTage).toBe(184);
+    expect(belegung.belegungsquote).toBeCloseTo(184 / 365, 6);
+    expect(belegung.hatLeerstand).toBe(true);
+  });
+
+  it('berechnet Auszug im laufenden Jahr tagegenau', () => {
+    const belegung = berechneBelegung(einheit({ mietende: '2025-02-28' }), zeitraum);
+    expect(belegung.belegteTage).toBe(59);
+    expect(belegung.belegungsquote).toBeCloseTo(59 / 365, 6);
+  });
+
+  it('belegt vor oder nach dem Zeitraum nicht', () => {
+    expect(berechneBelegung(einheit({ mietende: '2024-12-31' }), zeitraum).belegteTage).toBe(0);
+    expect(berechneBelegung(einheit({ mietbeginn: '2026-01-01' }), zeitraum).belegteTage).toBe(0);
+  });
+});
+
 describe('summeWasserverbrauch', () => {
-  it('summiert nur aktive Einheiten', () => {
+  it('summiert den Verbrauch aller Einheiten als Hausdenominator', () => {
     const einheiten: Einheit[] = [
       einheit({ id: 'a', verbrauchWasser: 100 }),
       einheit({ id: 'b', verbrauchWasser: 200 }),
       einheit({ id: 'c', verbrauchWasser: 999, mietende: '2024-06-30' }),
     ];
-    expect(summeWasserverbrauch(einheiten, '2025-12-31')).toBe(300);
+    expect(summeWasserverbrauch(einheiten, '2025-12-31')).toBe(1299);
+  });
+
+  it('summiert den Waermeverbrauch aller Einheiten als Hausdenominator', () => {
+    const einheiten: Einheit[] = [
+      einheit({ id: 'a', verbrauchWaerme: 100 }),
+      einheit({ id: 'b', verbrauchWaerme: 200 }),
+      einheit({ id: 'c', verbrauchWaerme: 999, mietende: '2024-06-30' }),
+    ];
+    expect(summeWaermeverbrauch(einheiten, '2025-12-31')).toBe(1299);
   });
 });

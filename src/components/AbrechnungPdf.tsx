@@ -13,6 +13,7 @@ import {
   View,
   pdf,
 } from '@react-pdf/renderer';
+import { addYearsIso, todayIso } from '@/domain/date';
 import { formatDatum, formatEuro, formatProzent } from '@/domain/format';
 import type { AbrechnungsErgebnis, MieterAbrechnung } from '@/domain/types';
 
@@ -152,9 +153,7 @@ interface DocProps {
 
 function AbrechnungDocument({ ergebnis, mieter }: DocProps) {
   const nachzahlung = mieter.saldo > 0;
-  const periodeEnde = new Date(ergebnis.zeitraum.bis);
-  const frist = new Date(periodeEnde);
-  frist.setFullYear(frist.getFullYear() + 1);
+  const frist = addYearsIso(ergebnis.zeitraum.bis, 1);
 
   return (
     <Document>
@@ -164,7 +163,7 @@ function AbrechnungDocument({ ergebnis, mieter }: DocProps) {
             <Text style={styles.briefkopfTitel}>NK-EXPRESS</Text>
             <Text style={styles.briefkopfSub}>Betriebskostenabrechnung</Text>
           </View>
-          <Text style={styles.datum}>{formatDatum(new Date().toISOString().slice(0, 10))}</Text>
+          <Text style={styles.datum}>{formatDatum(todayIso())}</Text>
         </View>
 
         <Text style={styles.titel}>Betriebskostenabrechnung</Text>
@@ -186,6 +185,12 @@ function AbrechnungDocument({ ergebnis, mieter }: DocProps) {
             <Text style={[styles.metaWert, { color: '#64748b', fontSize: 9 }]}>
               {mieter.einheitLage}
             </Text>
+            {mieter.hatLeerstand && (
+              <Text style={[styles.metaWert, { color: '#64748b', fontSize: 9 }]}>
+                Belegung {formatProzent(mieter.belegungsquote, 1)} | Vermieteranteil{' '}
+                {formatEuro(mieter.vermieterAnteil)}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -202,6 +207,11 @@ function AbrechnungDocument({ ergebnis, mieter }: DocProps) {
             <View style={styles.tdPos}>
               <Text style={styles.tdPosName}>{p.bezeichnung}</Text>
               {p.hinweis && <Text style={styles.tdPosHinweis}>{p.hinweis}</Text>}
+              {p.vermieterAnteil !== undefined && Math.abs(p.vermieterAnteil) > 0.005 && (
+                <Text style={styles.tdPosHinweis}>
+                  Vermieteranteil: {formatEuro(p.vermieterAnteil)}
+                </Text>
+              )}
             </View>
             <Text style={styles.tdNr}>{String(p.betrKvNr).padStart(2, '0')}</Text>
             <Text style={styles.tdZahl}>{formatEuro(p.gesamtkosten)}</Text>
@@ -241,7 +251,7 @@ function AbrechnungDocument({ ergebnis, mieter }: DocProps) {
 
         <Text style={styles.hinweis}>
           Hinweise § 556 Abs. 3 BGB: Diese Abrechnung muss dem Mieter spätestens zum{' '}
-          {formatDatum(frist.toISOString().slice(0, 10))} zugehen. Einwendungen sind binnen
+          {formatDatum(frist)} zugehen. Einwendungen sind binnen
           12 Monaten nach Zugang zu erheben. Bei nicht-verbrauchsabhängiger Heizkostenabrechnung
           besteht ggf. ein Kürzungsrecht von 15 % nach § 12 HeizkostenV. Aufteilung Heizkosten
           gemäß HeizkostenV § 7, CO₂-Kosten gemäß CO2KostAufG.

@@ -2,7 +2,7 @@
  * Vorschau der Abrechnung je Mieter mit Einzelpositionen und Saldo.
  */
 
-import { Download, FileText } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,20 +19,20 @@ import {
 import { formatDatum, formatEuro, formatProzent } from '@/domain/format';
 import type { AbrechnungsErgebnis, MieterAbrechnung } from '@/domain/types';
 import { cn } from '@/lib/utils';
-import { erzeugePdf } from './AbrechnungPdf';
 
 interface Props {
   ergebnis: AbrechnungsErgebnis;
 }
 
 export function AbrechnungPreview({ ergebnis }: Props) {
-  const aktive = ergebnis.mieter.filter((m) => !m.hatLeerstand);
-  const leerstand = ergebnis.mieter.filter((m) => m.hatLeerstand);
+  const aktive = ergebnis.mieter.filter((m) => m.belegungsquote > 0);
+  const leerstand = ergebnis.mieter.filter((m) => m.belegungsquote === 0);
   const [pdfLoading, setPdfLoading] = useState<string | null>(null);
 
   async function downloadPdf(mieter: MieterAbrechnung) {
     setPdfLoading(mieter.einheitId);
     try {
+      const { erzeugePdf } = await import('./AbrechnungPdf');
       await erzeugePdf(ergebnis, mieter);
     } finally {
       setPdfLoading(null);
@@ -48,7 +48,7 @@ export function AbrechnungPreview({ ergebnis }: Props) {
         <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Stat label="Von" value={formatDatum(ergebnis.zeitraum.von)} />
           <Stat label="Bis" value={formatDatum(ergebnis.zeitraum.bis)} />
-          <Stat label="Mieter" value={`${aktive.length} aktiv`} />
+          <Stat label="Mieter" value={`${aktive.length} mit Belegung`} />
           <Stat
             label="Vermieteranteil"
             value={formatEuro(ergebnis.vermieterAnteil)}
@@ -74,13 +74,16 @@ export function AbrechnungPreview({ ergebnis }: Props) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Folgende Einheiten standen im Abrechnungszeitraum (teilweise) leer.
+              Folgende Einheiten standen im gesamten Abrechnungszeitraum leer.
               Die anteiligen Kosten trägt der Eigentümer (§ 556a BGB):
             </p>
             <ul className="mt-3 space-y-1 text-sm">
               {leerstand.map((m) => (
                 <li key={m.einheitId} className="flex items-center gap-2">
                   <Badge variant="warn">{m.einheitLage}</Badge>
+                  <span className="num text-muted-foreground">
+                    {formatEuro(m.vermieterAnteil)}
+                  </span>
                   <span className="text-muted-foreground">{m.mieterName ?? '–'}</span>
                 </li>
               ))}
@@ -116,9 +119,20 @@ function MieterCard({
               </span>
             )}
           </CardTitle>
+          {mieter.hatLeerstand && (
+            <div className="mt-1">
+              <Badge variant="warn">Teilzeitraum</Badge>
+            </div>
+          )}
           <p className="mt-1 text-xs text-muted-foreground">
             {ergebnis.gebaeude.adresse}
           </p>
+          {mieter.hatLeerstand && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Belegung {formatProzent(mieter.belegungsquote, 1)} | Vermieteranteil{' '}
+              {formatEuro(mieter.vermieterAnteil)}
+            </p>
+          )}
         </div>
         <Button variant="outline" size="sm" onClick={onPdf} disabled={loading}>
           {loading ? (
@@ -150,6 +164,11 @@ function MieterCard({
                   <div className="font-medium">{p.bezeichnung}</div>
                   {p.hinweis && (
                     <div className="mt-0.5 text-xs text-muted-foreground">{p.hinweis}</div>
+                  )}
+                  {p.vermieterAnteil !== undefined && Math.abs(p.vermieterAnteil) > 0.005 && (
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      Vermieteranteil: {formatEuro(p.vermieterAnteil)}
+                    </div>
                   )}
                 </TableCell>
                 <TableCell className="num">{p.betrKvNr.toString().padStart(2, '0')}</TableCell>

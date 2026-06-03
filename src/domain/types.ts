@@ -85,6 +85,8 @@ export interface AbrechnungEinzelposition {
   anteil: number;
   /** Kosten für diese Einheit nach Umlage */
   betrag: number;
+  /** Vom Vermieter getragener Anteil dieser Einheit/Position */
+  vermieterAnteil?: number;
   /** Optionaler Hinweis (z. B. CO2-Korrektur, Heizkosten-Aufteilung) */
   hinweis?: string;
 }
@@ -100,6 +102,10 @@ export interface MieterAbrechnung {
   saldo: number;
   /** True, wenn diese Einheit im Zeitraum (teilweise) leer stand */
   hatLeerstand: boolean;
+  /** Anteil der Abrechnungsperiode, in dem die Einheit vermietet war (0-1) */
+  belegungsquote: number;
+  /** Vom Vermieter getragener Anteil dieser Einheit */
+  vermieterAnteil: number;
 }
 
 export interface AbrechnungsErgebnis {

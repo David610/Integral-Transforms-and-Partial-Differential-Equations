@@ -46,7 +46,7 @@ src/
   data/seed.ts    Beispielobjekt MFH Magdeburg, 15 Einheiten
   store/          Zustand-Store mit localStorage-Persistenz
   components/
-    ui/           Button, Card, Input, Label, Select, Table, Tabs, Badge
+    ui/           Button, Card, Input, Label, Select, Table, Badge
     StammdatenForm.tsx, KostenTable.tsx,
     AbrechnungPreview.tsx, AbrechnungPdf.tsx,
     FristenBanner.tsx
@@ -74,7 +74,7 @@ abgesichert. Die UI ruft `erstelleAbrechnung()` als Selector auf.
 ```bash
 npm install
 npm run dev       # Dev-Server auf http://localhost:5173
-npm test          # 32 Unit-Tests in src/domain
+npm test          # 47 Unit-Tests in src/domain
 npm run build     # Production-Build inkl. tsc --noEmit
 ```
 
@@ -92,7 +92,7 @@ Cloudflare Pages eignet sich perfekt:
    - Framework preset: **Vite**
    - Build command: `npm run build`
    - Build output directory: `dist`
-   - Node version: `20` (Env-Var `NODE_VERSION=20`)
+   - Node version: `22` (Env-Var `NODE_VERSION=22`)
 4. `Save and Deploy`. Jeder Push auf `main` triggert ein neues Deployment;
    PRs bekommen automatisch Preview-URLs.
 
@@ -106,8 +106,9 @@ wrangler pages deploy dist --project-name=nk-express
 
 ## Was läuft, was nicht
 
-- ✅ Vollständige Rechtslogik mit Unit-Tests (`umlage`, `heizkosten`, `co2`, `abrechnung`)
+- ✅ Vollständige Rechtslogik mit Unit-Tests (`date`, `umlage`, `heizkosten`, `co2`, `abrechnung`)
 - ✅ Stammdatenpflege Gebäude + Einheiten, Leerstand-Handling
+- ✅ Tagesgenaue Berücksichtigung von Mietbeginn/-ende im Abrechnungsjahr
 - ✅ Kostenpositionen frei erfassbar, BetrKV-Mapping, Umlageschlüssel-Wahl
 - ✅ Dashboard, Fristenbanner, Saldenübersicht
 - ✅ Abrechnungs-Vorschau je Mieter mit Einzelpositionen
@@ -120,8 +121,6 @@ wrangler pages deploy dist --project-name=nk-express
 - Multi-Objekt-Verwaltung (das Modell trägt es, die UI zeigt nur ein Objekt)
 - Authentifizierung, Benutzerrollen, Audit-Log
 - Server-Persistenz / Buchhaltungs-Schnittstellen (DATEV, Aareon)
-- Zeitanteilige Berücksichtigung von Mietbeginn/-ende innerhalb des Jahres
-  (heute: Einheit zählt im Zeitraum entweder voll oder ist Leerstand)
 - Detaillierte CO₂-Brennstoffaufschlüsselung (Erdgas-Standardfaktor 0,201 kg/kWh)
 
 ## Beispieldatensatz

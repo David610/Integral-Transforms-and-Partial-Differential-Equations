@@ -12,7 +12,7 @@ export function Dashboard() {
   const umlagefaehig = kostenpositionen
     .filter((k) => k.umlagefaehig)
     .reduce((s, k) => s + k.betrag, 0);
-  const leerstand = einheiten.filter((e) => e.mietende).length;
+  const leerstand = ergebnis.mieter.filter((m) => m.hatLeerstand).length;
   const nachzahlungSumme = ergebnis.mieter
     .filter((m) => m.saldo > 0)
     .reduce((s, m) => s + m.saldo, 0);
