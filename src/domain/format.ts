@@ -2,6 +2,8 @@
  * Format-Helfer für deutsche Zahlen-, Währungs- und Datumsformate.
  */
 
+import { isoToUtcDate } from './date';
+
 const EUR = new Intl.NumberFormat('de-DE', {
   style: 'currency',
   currency: 'EUR',
@@ -22,6 +24,7 @@ const DATE = new Intl.DateTimeFormat('de-DE', {
   day: '2-digit',
   month: '2-digit',
   year: 'numeric',
+  timeZone: 'UTC',
 });
 
 export function formatEuro(value: number): string {
@@ -38,8 +41,8 @@ export function formatProzent(value: number, digits = 2): string {
 
 export function formatDatum(iso: string): string {
   if (!iso) return '–';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
+  const date = isoToUtcDate(iso);
+  if (!date) return iso;
   return DATE.format(date);
 }
 

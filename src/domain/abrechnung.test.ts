@@ -87,6 +87,14 @@ function setup() {
   return { gebaeude, einheiten, kostenpositionen, zeitraum, heizkostenConfig, co2Config };
 }
 
+function summeMieter(ergebnis: ReturnType<typeof erstelleAbrechnung>): number {
+  return ergebnis.mieter.reduce((sum, m) => sum + m.summeKosten, 0);
+}
+
+function summeKosten(input: ReturnType<typeof setup>): number {
+  return input.kostenpositionen.reduce((sum, k) => sum + k.betrag, 0);
+}
+
 describe('erstelleAbrechnung', () => {
   it('liefert je Einheit eine Abrechnung', () => {
     const r = erstelleAbrechnung(setup());
@@ -157,5 +165,70 @@ describe('erstelleAbrechnung', () => {
     const heizA = r.mieter[0].einzelpositionen.find((p) => p.bezeichnung === 'Heizung');
     const refHeizA = refR.mieter[0].einzelpositionen.find((p) => p.bezeichnung === 'Heizung');
     expect(heizA!.betrag).toBeLessThan(refHeizA!.betrag);
+  });
+
+  it('rechnet Auszug im laufenden Jahr tagegenau ab', () => {
+    const input = setup();
+    input.einheiten[1] = { ...input.einheiten[1], mietende: '2025-06-30' };
+    const r = erstelleAbrechnung(input);
+    const grundsteuerB = r.mieter[1].einzelpositionen.find(
+      (p) => p.bezeichnung === 'Grundsteuer',
+    );
+
+    expect(r.mieter[1].hatLeerstand).toBe(true);
+    expect(r.mieter[1].belegungsquote).toBeCloseTo(181 / 365, 6);
+    expect(grundsteuerB?.betrag).toBeCloseTo(500 * (181 / 365), 2);
+    expect(grundsteuerB?.vermieterAnteil).toBeCloseTo(500 * (184 / 365), 2);
+  });
+
+  it('rechnet Einzug nach Periodenende voll dem Vermieter zu', () => {
+    const input = setup();
+    input.einheiten[1] = { ...input.einheiten[1], mietbeginn: '2026-01-01' };
+    const r = erstelleAbrechnung(input);
+
+    expect(r.mieter[1].belegungsquote).toBe(0);
+    expect(r.mieter[1].summeKosten).toBe(0);
+    expect(r.mieter[1].vorauszahlung).toBe(0);
+    expect(r.mieter[1].vermieterAnteil).toBeGreaterThan(0);
+  });
+
+  it('belastet Leerstandsverbrauch nicht den aktiven Mieter', () => {
+    const input = setup();
+    input.einheiten[1] = { ...input.einheiten[1], mietende: '2024-12-31' };
+    const r = erstelleAbrechnung(input);
+    const wasserA = r.mieter[0].einzelpositionen.find(
+      (p) => p.bezeichnung === 'Wasser/Abwasser',
+    );
+
+    expect(wasserA?.betrag).toBeCloseTo(300, 2);
+    expect(r.mieter[1].vermieterAnteil).toBeGreaterThan(700);
+  });
+
+  it('wendet HeizkostenV-Kuerzung an, wenn kein Waermeverbrauch erfasst ist', () => {
+    const input = setup();
+    input.einheiten = input.einheiten.map((e) => ({ ...e, verbrauchWaerme: 0 }));
+    const r = erstelleAbrechnung(input);
+    const heizA = r.mieter[0].einzelpositionen.find((p) => p.bezeichnung === 'Heizung');
+
+    expect(heizA?.betrag).toBeCloseTo(850, 2);
+    expect(heizA?.vermieterAnteil).toBeCloseTo(150, 2);
+    expect(heizA?.hinweis).toContain('15 % Kuerzung');
+  });
+
+  it('ordnet bei komplettem Leerstand alle Kosten genau einmal dem Vermieter zu', () => {
+    const input = setup();
+    input.einheiten = input.einheiten.map((e) => ({ ...e, mietende: '2024-12-31' }));
+    const r = erstelleAbrechnung(input);
+
+    expect(summeMieter(r)).toBe(0);
+    expect(r.vermieterAnteil).toBeCloseTo(summeKosten(input), 2);
+  });
+
+  it('erhaelt Kostenkonservation inklusive CO2-Korrektur', () => {
+    const input = setup();
+    input.co2Config.spezifischerAusstoss = 60;
+    const r = erstelleAbrechnung(input);
+
+    expect(summeMieter(r) + r.vermieterAnteil).toBeCloseTo(summeKosten(input), 2);
   });
 });
