@@ -1,6 +1,6 @@
-name = "nk-express"
+name = "immovea"
 compatibility_date = "2024-11-12"
 
 [assets]
 directory = "./dist"
-html_handling = "single-page-application"
+not_found_handling = "single-page-application"
